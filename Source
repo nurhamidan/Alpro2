@@ -1,0 +1,326 @@
+program Pendataan_Mahasiswa;
+uses crt;
+const
+     maks=10000;
+     namafile='datamhs8.dat';
+type
+    TMhs=record
+               // daftar FIELD
+               nim:string[8];
+               nama:string[20];
+               tugas,uts,uas:real;
+               nilaiakhir:real;
+               index:char;
+         end;
+    TArrayMhs=array[1..maks] of TMhs;
+
+procedure menu(var pilihan:integer);
+begin
+     clrscr;
+     writeln('----------------------------');
+     writeln('1. Tambah Data');
+     writeln('2. View Data');
+     writeln('3. Pengurutan berdasar NIM (Menaik)');
+     writeln('4. Pengurutan berdasar Nama (Menaik)');
+     writeln('5. Pengurutan berdasar Nilai Akhir (Menurun)');
+     writeln('6. Penghapusan data');
+     writeln('7. Pencarian berdasarkan nama');
+     writeln('0. Keluar');
+     writeln('----------------------------');
+     write('Pilihan anda : ');readln(pilihan);
+end;
+
+function cari_nim(mhs : TArrayMhs; banyakdata : integer; dicari : string) : integer;
+var
+   i : integer;
+begin
+     i := 1;
+     while (mhs[i].nim <> dicari) and (i < banyakdata) do
+           i := i + 1;
+     if mhs[i].nim = dicari then
+        cari_nim := i
+     else
+         cari_nim := 0;
+end;
+
+function cari_nama(mhs : TArrayMhs; banyakdata : integer; dicari : string) : integer;
+var
+   i : integer;
+begin
+     i := 1;
+     //while (mhs[i].nama <> dicari) and (i < banyakdata) do seluruh
+     //while (copy(mhs[i].nama, 1, length(dicari)) <> dicari) and (i < banyakdata) do awalan
+     //while (copy(mhs[i].nama, length(mhs[i].nama) - length(dicari) + 1, length(dicari)) <> dicari) and (i < banyakdata) do akhiran
+     while (pos(dicari, mhs[i].nama) = 0) and (i < banyakdata) do
+
+
+           i := i + 1;
+     //if mhs[i].nama = dicari then
+     if pos(dicari, mhs[i].nama) <> 0 then
+        cari_nama := i
+     else
+         cari_nama := 0;
+end;
+
+procedure pencarian_nama(mhs : TArrayMhs; banyakdata : integer);
+var
+   nama : string;
+   posisi : integer;
+begin
+     write('Nama yang dicari : '); readln(nama);
+     posisi := cari_nama(mhs, banyakdata, nama);
+     if posisi <> 0 then
+     begin
+          writeln('Data ditemukan di data ke-', posisi);
+          writeln('NIM : ', mhs[posisi].nim);
+          writeln('Nama : ', mhs[posisi].nama);
+     end
+     else
+         writeln('Nama [', nama, '] tidak ditemukan');
+     writeln('Tekan Enter untuk melanjutkan'); readln;
+end;
+
+procedure tambah_mhs(var mhs:TArrayMhs;var banyakdata:Integer);
+var
+   nimbaru : string;
+   posisi : integer;
+begin
+     if banyakdata < maks then
+     begin
+       write('NIM :'); readln(nimbaru);
+       posisi := cari_nim(mhs, banyakdata, nimbaru);
+       if posisi = 0 then //jika nim belum ada
+       begin
+          banyakdata:=banyakdata+1;
+          writeln('Masukan data mahasiswa ke-',banyakdata);
+          mhs[banyakdata].nim := nimbaru;
+          writeln('NIM     : ', nimbaru);
+
+          write('Nama    : ');readln(mhs[banyakdata].nama);
+
+          repeat
+             write('Tugas   : ');readln(mhs[banyakdata].tugas);
+          until (mhs[banyakdata].tugas>=0)and(mhs[banyakdata].tugas<=100);
+          write('UTS     : ');readln(mhs[banyakdata].uts);
+          write('UAS     : ');readln(mhs[banyakdata].uas);
+          mhs[banyakdata].nilaiakhir:=mhs[banyakdata].tugas*0.20+
+                                      mhs[banyakdata].uts*0.30+
+                                      mhs[banyakdata].uas*0.50;
+          if mhs[banyakdata].nilaiakhir>=80 then
+             mhs[banyakdata].index:='A'
+          else
+          if mhs[banyakdata].nilaiakhir>=68 then
+             mhs[banyakdata].index:='B'
+          else
+          if mhs[banyakdata].nilaiakhir>=56 then
+             mhs[banyakdata].index:='C'
+          else
+          if mhs[banyakdata].nilaiakhir>=45 then
+             mhs[banyakdata].index:='D'
+          else
+              mhs[banyakdata].index:='E';
+       end
+       else
+       begin
+            writeln('NIM tersebut telah ada di data ke-', posisi);
+            writeln('Nama Mhs : ', mhs[posisi].nama);
+            readln;
+       end;
+
+     end
+     else
+         writeln('Memori penuh.... Tidak bisa lagi tambah data');
+
+end;
+procedure simpan_ke_file(mhs:TArrayMhs;banyakdata:integer);
+var
+   f:file of TMhs;
+   i:integer;
+begin
+     assign(f,namafile);
+     rewrite(f);
+     for i:=1 to banyakdata do
+        write(f,mhs[i]);
+     close(f);
+end;
+procedure baca_dari_file(var mhs:TArrayMhs;var banyakdata:integer);
+var
+   f:file of TMhs;
+begin
+     assign(f,namafile);
+     {$I-} // pascal, jangan cepet ngambek kalau nanti ada error
+     reset(f);
+     {$I+} // pascal, galak lagi ya...
+     if IOResult<>0 then // jika ada error
+        rewrite(f); // buat file baru
+     while not eof(f) do
+     begin
+          banyakdata:=banyakdata+1;
+          read(f,mhs[banyakdata]);
+     end;
+     close(f);
+end;
+procedure view_mhs(mhs:TArrayMhs;banyakdata:integer);
+var
+   i:integer;
+begin
+     clrscr;
+     writeln('Data Mahasiswa');
+     writeln('-------------------------------------------------------------------------------');
+     writeln('|   NIM    |         NAMA         |  TUGAS |   UTS  |   UAS  |   NA   | INDEX |');
+     writeln('-------------------------------------------------------------------------------');
+{'
+00000000011111111112222222222333333333344444444445555555555666666666677777777778
+12345678901234567890123456789012345678901234567890123456789012345678901234567890
+| 12345678 | 12345678901234567890 | 100.00 | 100.00 | 100.00 | 100.00 | INDEX |
+|   NIM    |         NAMA         |  TUGAS |   UTS  |   UAS  |   NA   | INDEX |
+}
+     for i:=1 to banyakdata do
+     begin
+          gotoxy(1,i+4);writeln('|          |                      |        |        |        |        |       |');
+          gotoxy(3,i+4);write(mhs[i].nim);
+          gotoxy(14,i+4);write(mhs[i].nama);
+          gotoxy(37,i+4);write(mhs[i].tugas:6:2);
+          gotoxy(46,i+4);write(mhs[i].uts:6:2);
+          gotoxy(55,i+4);write(mhs[i].uas:6:2);
+          gotoxy(64,i+4);write(mhs[i].nilaiakhir:6:2);
+          gotoxy(75,i+4);writeln(mhs[i].index);
+     end;
+     writeln('-------------------------------------------------------------------------------');
+     writeln('Tekan sembarang tombol untuk melanjutkan');readkey;
+end;
+procedure sort_by_nim_asc(var mhs:TArrayMhs;banyakdata:integer);
+var
+   i,j,imin:integer;
+   temp:TMhs;
+begin
+     for i:=1 to banyakdata-1 do
+     begin
+          imin:=i;
+          for j:=i+1 to banyakdata do
+          begin
+               if mhs[j].nim<mhs[imin].nim then
+                  imin:=j;
+          end;
+          if i<>imin then
+          begin
+               temp:=mhs[i];
+               mhs[i]:=mhs[imin];
+               mhs[imin]:=temp;
+          end;
+     end;
+     writeln('Pengurutan selesai. Tekan sembarang tombol');readkey;
+end;
+procedure sort_by_nama_asc(var mhs:TArrayMhs;banyakdata:integer);
+var
+   i,j,imin:integer;
+   temp:TMhs;
+begin
+     for i:=1 to banyakdata-1 do
+     begin
+          imin:=i;
+          for j:=i+1 to banyakdata do
+          begin
+               if upcase(mhs[j].nama)<upcase(mhs[imin].nama) then
+                  imin:=j;
+          end;
+          if i<>imin then
+          begin
+               temp:=mhs[i];
+               mhs[i]:=mhs[imin];
+               mhs[imin]:=temp;
+          end;
+     end;
+     writeln('Pengurutan selesai. Tekan sembarang tombol');readkey;
+end;
+procedure sort_by_nilaiakhir_desc(var mhs:TArrayMhs;banyakdata:integer);
+var
+   i,j:integer;
+   temp:TMhs;
+begin
+     for i:=1 to banyakdata-1 do
+          for j:=banyakdata downto i+1 do
+               if mhs[j].nilaiakhir>mhs[j-1].nilaiakhir then
+               begin
+                    temp:=mhs[j];
+                    mhs[j]:=mhs[j-1];
+                    mhs[j-1]:=temp;
+               end;
+
+    writeln('Pengurutan selesai. Tekan sembarang tombol');readkey;
+end;
+
+procedure hapus_data(var mhs : TArrayMHS; var banyakdata : integer);
+var
+   indexhapus, i : integer;
+   pilihanHapus : char;
+begin
+     repeat
+           {Sebelum memilih nomor, lakukan dulu penampilan data agar user dapat mengetahui nomor indexnya}
+           view_mhs(mhs,banyakdata);
+           write('Nomor data yang akan dihapus ?');
+           readln(indexhapus);
+     until (indexhapus >= 1) and (indexhapus <= banyakdata);
+     writeln('Nim : ', mhs[indexhapus].nim);
+     writeln('Apakah anda yakin? [Y / N]');
+     readln(pilihanHapus);
+     if (upcase(pilihanHapus) = 'Y') then
+        begin
+             for i := indexhapus to banyakdata-1 do
+                 mhs[i] := mhs[i+1];
+             banyakdata := banyakdata - 1;
+             writeln('Penghapusan selesai. Tekan [Enter]'); readkey;
+        end
+      else
+          writeln('Penghapusan dibatalkan. Tekan [Enter]'); readkey;
+end;
+
+var
+   mhs:TArrayMhs;
+   banyakdata:integer;
+   pilihan:integer;
+   simpan:char;
+   adaperubahan:boolean;
+begin
+     banyakdata:=0;
+     baca_dari_file(mhs,banyakdata);
+     adaperubahan:=false;
+     repeat
+           menu(pilihan);
+           if pilihan=1 then
+           begin
+              tambah_mhs(mhs,banyakdata);
+              adaperubahan:=true;
+           end
+           else
+           if pilihan=2 then
+              view_mhs(mhs,banyakdata)
+           else
+           if pilihan=3 then
+              sort_by_nim_asc(mhs,banyakdata)
+           else
+           if pilihan=4 then
+              sort_By_nama_asc(mhs,banyakdata)
+           else
+           if pilihan=5 then
+              sort_by_nilaiakhir_desc(mhs,banyakdata)
+           else
+           if pilihan=6 then
+           begin
+              hapus_data(mhs, banyakdata);
+              adaperubahan := true;
+           end
+           else
+           if pilihan=7 then
+           begin
+              pencarian_nama(mhs, banyakdata);
+           end;
+     until pilihan=0;
+     if adaperubahan=true then
+     begin
+          writeln('Telah terjadi perubahan');
+          write('Data mau disimpan ke file? [Y / N]');readln(simpan);
+          if upcase(simpan)='Y' then
+             simpan_ke_file(mhs,banyakdata);
+     end;
+end.
